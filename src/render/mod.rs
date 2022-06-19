@@ -17,23 +17,11 @@ impl Render {
     }
 
     pub fn draw(&mut self, _model: &Model, framebuffer: &mut ugli::Framebuffer) {
-        let shape = Shape(vec![
-            TriPos { x: 0, y: 0 },
-            TriPos { x: 1, y: 0 },
-            TriPos { x: 0, y: 1 },
-            TriPos { x: -1, y: 0 },
-            TriPos { x: 0, y: -1 },
-            TriPos { x: 1, y: 1 },
-            TriPos { x: -1, y: 1 },
-            TriPos { x: 1, y: -1 },
-            TriPos { x: -1, y: -1 },
-        ]);
         let camera = &Camera2d {
             center: vec2(0.0, 0.0),
             rotation: 0.0,
-            fov: 10.0,
+            fov: 50.0,
         };
-        self.draw_shape(&shape, camera, framebuffer);
     }
 
     pub fn draw_shape(
@@ -49,7 +37,6 @@ impl Render {
                 0.0
             };
             let pos = tri_pos.to_cartesian().map(|x| x.as_f32());
-            println!("Triangle at {tri_pos:?} (cartesian: {pos:?}) at angle {angle}");
             self.draw_triangle(pos, angle, Color::GREEN, 0.7, camera, framebuffer)
         }
     }
@@ -71,6 +58,6 @@ impl Render {
             .into_iter()
             .map(|position| position.rotate(angle) + pos)
             .collect();
-        draw_2d::Polygon::new(dbg!(positions), color).draw_2d(&self.geng, framebuffer, camera);
+        draw_2d::Polygon::new(positions, color).draw_2d(&self.geng, framebuffer, camera);
     }
 }
