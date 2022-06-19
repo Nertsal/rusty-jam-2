@@ -43,7 +43,7 @@ impl Render {
     pub fn draw(&mut self, model: &Model, framebuffer: &mut ugli::Framebuffer) {
         let framebuffer_size = framebuffer.size().map(|x| x as f32);
         let camera_center = Vec2::ZERO;
-        let camera_height = 50.0;
+        let camera_height = 20.0;
         let camera = &Camera2d {
             center: vec2(0.0, 0.0),
             rotation: 0.0,
@@ -53,32 +53,26 @@ impl Render {
         let bounds =
             AABB::point(camera_center).extend_symmetric(vec2(camera_width, camera_height) / 2.0);
 
-        for (index, plant) in model.player_a.farm.plants.iter().enumerate() {
-            let bounding_box =
-                AABB::points_bounding_box(plant.shape.0.iter().map(|pos| pos.to_cartesian())); // TODO: avoid panick when shape has no points
-            let scale = r32(10.0)
-                / bounding_box
-                    .width()
-                    .max(bounding_box.height())
-                    .max(r32(1.0));
-            let draw_count = ((1.0
-                - (plant.time_left as f32 / plant.cooldown as f32) * plant.shape.0.len() as f32)
-                .floor() as usize)
-                .max(1);
-            draw_shape(
-                bounds.bottom_left() + vec2(10.0 * (index as f32 + 1.0), 10.0),
-                plant.shape.0.iter().take(draw_count),
-                scale.as_f32(),
-                camera,
-                &self.geng,
-                framebuffer,
-            );
-        }
+        draw_farm(
+            &model.player_a.farm,
+            bounds,
+            camera,
+            &self.geng,
+            framebuffer,
+        );
 
+        let buffer_bounds = AABB::from_corners(
+            vec2(0.05, 0.3) * bounds.size(),
+            vec2(0.2, 0.7) * bounds.size(),
+        )
+        .translate(bounds.bottom_left());
         for shape in &model.player_a.shape_buffer.0 {
-            let position = *self
-                .positions
-                .get_or_default(shape.id, vec2(r32(0.0), r32(0.0)));
+            let random_pos = vec2(
+                global_rng().gen_range(buffer_bounds.x_min..=buffer_bounds.x_max),
+                global_rng().gen_range(buffer_bounds.y_min..=buffer_bounds.y_max),
+            )
+            .map(|x| r32(x));
+            let position = *self.positions.get_or_default(shape.id, random_pos);
             draw_shape(
                 position.map(|x| x.as_f32()),
                 &shape.shape.0,
@@ -88,6 +82,36 @@ impl Render {
                 framebuffer,
             );
         }
+    }
+}
+
+pub fn draw_farm(
+    farm: &ShapeFarm,
+    bounds: AABB<f32>,
+    camera: &Camera2d,
+    geng: &Geng,
+    framebuffer: &mut ugli::Framebuffer,
+) {
+    for (index, plant) in farm.plants.iter().enumerate() {
+        let bounding_box =
+            AABB::points_bounding_box(plant.shape.0.iter().map(|pos| pos.to_cartesian())); // TODO: avoid panick when shape has no points
+        let scale = r32(1.0)
+            / bounding_box
+                .width()
+                .max(bounding_box.height())
+                .max(r32(1.0));
+        let draw_count = ((1.0
+            - (plant.time_left as f32 / plant.cooldown as f32) * plant.shape.0.len() as f32)
+            .floor() as usize)
+            .max(1);
+        draw_shape(
+            bounds.bottom_left() + vec2(0.1 * (index as f32 + 1.0), 0.1) * bounds.size(),
+            plant.shape.0.iter().take(draw_count),
+            scale.as_f32(),
+            camera,
+            geng,
+            framebuffer,
+        );
     }
 }
 
