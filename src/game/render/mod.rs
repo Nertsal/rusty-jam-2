@@ -111,10 +111,8 @@ impl Render {
             );
         }
 
-        let active_bounds = AABB::from_corners(
-            relative_v2(0.5 - DANGER_ZONE, 0.3),
-            relative_v2(0.45, 0.7),
-        );
+        let active_bounds =
+            AABB::from_corners(relative_v2(0.5 - DANGER_ZONE, 0.3), relative_v2(0.45, 0.7));
         for shape in &model.player_a.active_shapes.0 {
             let random_pos = vec2(
                 global_rng().gen_range(active_bounds.x_min..=active_bounds.x_max),

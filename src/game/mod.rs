@@ -1,5 +1,9 @@
 use super::*;
 
+mod controller;
+mod model;
+mod render;
+
 use model::*;
 use render::Render;
 
@@ -26,15 +30,7 @@ impl geng::State for Game {
     }
 
     fn handle_event(&mut self, event: geng::Event) {
-        match event {
-            geng::Event::KeyDown { key } => match key {
-                geng::Key::Enter => {
-                    self.model.next_turn();
-                }
-                _ => {}
-            },
-            _ => {}
-        }
+        self.handle_event(event)
     }
 
     fn update(&mut self, delta_time: f64) {

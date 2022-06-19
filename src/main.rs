@@ -3,9 +3,6 @@ use geng::prelude::*;
 
 mod assets;
 mod game;
-mod logic;
-mod model;
-mod render;
 
 use assets::*;
 

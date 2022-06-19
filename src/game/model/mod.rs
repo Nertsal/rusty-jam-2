@@ -1,5 +1,7 @@
 use super::*;
 
+mod logic;
+
 pub type Time = R32;
 pub type Turns = u64;
 pub type Id = u64;
@@ -20,7 +22,7 @@ impl IdGenerator {
 
 #[derive(Debug)]
 pub struct Model {
-    pub id_gen: IdGenerator,
+    id_gen: IdGenerator,
     pub player_a: Player,
     pub player_b: Player,
 }
