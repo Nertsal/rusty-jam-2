@@ -53,6 +53,34 @@ impl Render {
         let bounds =
             AABB::point(camera_center).extend_symmetric(vec2(camera_width, camera_height) / 2.0);
 
+        let relative_v2 = |x, y| vec2(x, y) * bounds.size() + bounds.bottom_left();
+
+        const DANGER_ZONE: f32 = 0.2;
+        draw_2d::Segment::new(
+            Segment::new(
+                relative_v2(0.5 - DANGER_ZONE, 0.0),
+                relative_v2(0.5 - DANGER_ZONE, 1.0),
+            ),
+            0.01 * bounds.width(),
+            Color::GRAY,
+        )
+        .draw_2d(&self.geng, framebuffer, camera);
+        draw_2d::Segment::new(
+            Segment::new(relative_v2(0.5, 0.0), relative_v2(0.5, 1.0)),
+            0.02 * bounds.width(),
+            Color::rgb(0.2, 0.2, 0.2),
+        )
+        .draw_2d(&self.geng, framebuffer, camera);
+        draw_2d::Segment::new(
+            Segment::new(
+                relative_v2(0.5 + DANGER_ZONE, 0.0),
+                relative_v2(0.5 + DANGER_ZONE, 1.0),
+            ),
+            0.01 * bounds.width(),
+            Color::GRAY,
+        )
+        .draw_2d(&self.geng, framebuffer, camera);
+
         draw_farm(
             &model.player_a.farm,
             bounds,
@@ -70,6 +98,27 @@ impl Render {
             let random_pos = vec2(
                 global_rng().gen_range(buffer_bounds.x_min..=buffer_bounds.x_max),
                 global_rng().gen_range(buffer_bounds.y_min..=buffer_bounds.y_max),
+            )
+            .map(|x| r32(x));
+            let position = *self.positions.get_or_default(shape.id, random_pos);
+            draw_shape(
+                position.map(|x| x.as_f32()),
+                &shape.shape.0,
+                1.0,
+                camera,
+                &self.geng,
+                framebuffer,
+            );
+        }
+
+        let active_bounds = AABB::from_corners(
+            relative_v2(0.5 - DANGER_ZONE, 0.3),
+            relative_v2(0.45, 0.7),
+        );
+        for shape in &model.player_a.active_shapes.0 {
+            let random_pos = vec2(
+                global_rng().gen_range(active_bounds.x_min..=active_bounds.x_max),
+                global_rng().gen_range(active_bounds.y_min..=active_bounds.y_max),
             )
             .map(|x| r32(x));
             let position = *self.positions.get_or_default(shape.id, random_pos);
