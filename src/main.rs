@@ -1,5 +1,5 @@
-#![allow(dead_code)]
 use geng::prelude::*;
+use geng::{Camera2d, Draw2d};
 
 mod assets;
 mod game;

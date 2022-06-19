@@ -1,6 +1,5 @@
 use super::*;
 
-use geng::{Camera2d, Draw2d};
 use model::*;
 
 pub type Coord = R32;
@@ -29,6 +28,8 @@ pub struct Render {
     geng: Geng,
     assets: Rc<Assets>,
     pub positions: Storage<Vec2<Coord>>,
+    pub camera: Camera2d,
+    pub framebuffer_size: Vec2<f32>,
 }
 
 impl Render {
@@ -37,21 +38,22 @@ impl Render {
             geng: geng.clone(),
             assets: assets.clone(),
             positions: Storage::new(),
+            camera: Camera2d {
+                center: vec2(0.0, 0.0),
+                rotation: 0.0,
+                fov: 20.0,
+            },
+            framebuffer_size: vec2(1.0, 1.0),
         }
     }
 
     pub fn draw(&mut self, model: &Model, framebuffer: &mut ugli::Framebuffer) {
         let framebuffer_size = framebuffer.size().map(|x| x as f32);
+        self.framebuffer_size = framebuffer_size;
         let camera_center = Vec2::ZERO;
-        let camera_height = 20.0;
-        let camera = &Camera2d {
-            center: vec2(0.0, 0.0),
-            rotation: 0.0,
-            fov: camera_height,
-        };
-        let camera_width = camera.fov / framebuffer_size.y * framebuffer_size.x;
+        let camera_width = self.camera.fov / framebuffer_size.y * framebuffer_size.x;
         let bounds =
-            AABB::point(camera_center).extend_symmetric(vec2(camera_width, camera_height) / 2.0);
+            AABB::point(camera_center).extend_symmetric(vec2(camera_width, self.camera.fov) / 2.0);
 
         let relative_v2 = |x, y| vec2(x, y) * bounds.size() + bounds.bottom_left();
 
@@ -64,13 +66,13 @@ impl Render {
             0.01 * bounds.width(),
             Color::GRAY,
         )
-        .draw_2d(&self.geng, framebuffer, camera);
+        .draw_2d(&self.geng, framebuffer, &self.camera);
         draw_2d::Segment::new(
             Segment::new(relative_v2(0.5, 0.0), relative_v2(0.5, 1.0)),
             0.02 * bounds.width(),
             Color::rgb(0.2, 0.2, 0.2),
         )
-        .draw_2d(&self.geng, framebuffer, camera);
+        .draw_2d(&self.geng, framebuffer, &self.camera);
         draw_2d::Segment::new(
             Segment::new(
                 relative_v2(0.5 + DANGER_ZONE, 0.0),
@@ -79,12 +81,12 @@ impl Render {
             0.01 * bounds.width(),
             Color::GRAY,
         )
-        .draw_2d(&self.geng, framebuffer, camera);
+        .draw_2d(&self.geng, framebuffer, &self.camera);
 
         draw_farm(
             &model.player_a.farm,
             bounds,
-            camera,
+            &self.camera,
             &self.geng,
             framebuffer,
         );
@@ -105,7 +107,7 @@ impl Render {
                 position.map(|x| x.as_f32()),
                 &shape.shape.0,
                 1.0,
-                camera,
+                &self.camera,
                 &self.geng,
                 framebuffer,
             );
@@ -124,7 +126,7 @@ impl Render {
                 position.map(|x| x.as_f32()),
                 &shape.shape.0,
                 1.0,
-                camera,
+                &self.camera,
                 &self.geng,
                 framebuffer,
             );
@@ -171,40 +173,11 @@ pub fn draw_shape<'a>(
     framebuffer: &mut ugli::Framebuffer,
 ) {
     for tri_pos in shape {
-        let angle = if tri_pos.is_upside_down() {
-            f32::PI
-        } else {
-            0.0
-        };
-        let pos = tri_pos.to_cartesian().map(|x| x.as_f32());
-        draw_triangle(
-            pos * scale + offset,
-            angle,
-            Color::GREEN,
-            scale * 0.7,
-            camera,
-            geng,
-            framebuffer,
-        )
+        let vertices = tri_pos
+            .to_vertices()
+            .into_iter()
+            .map(|pos| pos.map(|x| x.as_f32()) * scale + offset)
+            .collect();
+        draw_2d::Polygon::new(vertices, Color::GREEN).draw_2d(geng, framebuffer, camera);
     }
-}
-
-pub fn draw_triangle(
-    pos: Vec2<f32>,
-    angle: f32,
-    color: Color<f32>,
-    side_length: f32,
-    camera: &Camera2d,
-    geng: &Geng,
-    framebuffer: &mut ugli::Framebuffer,
-) {
-    // Calculate relative position for the triangle pointing up
-    let dx = side_length * 0.5;
-    let dy_low = side_length * 3.0.sqrt() / 6.0;
-    let dy_high = dy_low * 2.0;
-    let positions = [vec2(dx, -dy_low), vec2(-dx, -dy_low), vec2(0.0, dy_high)]
-        .into_iter()
-        .map(|position| position.rotate(angle) + pos)
-        .collect();
-    draw_2d::Polygon::new(positions, color).draw_2d(geng, framebuffer, camera);
 }

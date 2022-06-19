@@ -4,21 +4,27 @@ mod controller;
 mod model;
 mod render;
 
+use controller::Controller;
 use model::*;
 use render::Render;
 
 pub struct Game {
-    geng: Geng,
     render: Render,
     model: Model,
+    controller: Controller,
+}
+
+pub enum PlayerAction {
+    GrabShape(Id),
+    EndTurn,
 }
 
 impl Game {
     pub fn new(geng: &Geng, assets: &Rc<Assets>) -> Self {
         Self {
-            geng: geng.clone(),
             render: Render::new(geng, assets),
             model: Model::new(),
+            controller: Controller::new(),
         }
     }
 }
@@ -30,7 +36,17 @@ impl geng::State for Game {
     }
 
     fn handle_event(&mut self, event: geng::Event) {
-        self.handle_event(event)
+        if let Some(action) = self
+            .controller
+            .handle_event(&self.model, &self.render, event)
+        {
+            match action {
+                PlayerAction::GrabShape(shape_id) => todo!(),
+                PlayerAction::EndTurn => {
+                    self.model.tick();
+                }
+            }
+        }
     }
 
     fn update(&mut self, delta_time: f64) {

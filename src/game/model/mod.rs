@@ -117,36 +117,4 @@ impl Plant {
             cooldown,
         }
     }
-
-    pub fn tick(&mut self) -> bool {
-        if self.time_left <= 0 {
-            self.time_left = self.cooldown;
-            return true;
-        }
-        self.time_left -= 1;
-        false
-    }
-}
-
-impl TriPos {
-    pub fn to_cartesian(&self) -> Vec2<R32> {
-        let side = r32(1.0);
-        let root_3 = r32(3.0).sqrt();
-        vec2(
-            side * r32(0.5) * r32(self.x as _),
-            side * root_3 * r32(0.5) * r32(self.y as _)
-                + if self.is_upside_down() {
-                    r32(1.0)
-                } else {
-                    r32(-1.0)
-                } * side
-                    * root_3
-                    / r32(12.0),
-        )
-    }
-
-    /// Whether a triangle in that position points down
-    pub fn is_upside_down(&self) -> bool {
-        (self.x + self.y) % 2 != 0
-    }
 }
