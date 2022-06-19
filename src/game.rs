@@ -25,7 +25,17 @@ impl geng::State for Game {
         self.render.draw(&self.model, framebuffer);
     }
 
-    fn handle_event(&mut self, _event: geng::Event) {}
+    fn handle_event(&mut self, event: geng::Event) {
+        match event {
+            geng::Event::KeyDown { key } => match key {
+                geng::Key::Enter => {
+                    self.model.next_turn();
+                }
+                _ => {}
+            },
+            _ => {}
+        }
+    }
 
     fn update(&mut self, delta_time: f64) {
         let delta_time = Time::new(delta_time as _);
