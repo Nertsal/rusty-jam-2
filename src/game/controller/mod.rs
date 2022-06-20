@@ -31,7 +31,7 @@ impl Controller {
                 _ => vec![],
             },
             geng::Event::MouseMove { position, .. } => self.mouse_move(render, position),
-            geng::Event::MouseUp { position, button } => match button {
+            geng::Event::MouseUp { button, .. } => match button {
                 geng::MouseButton::Left => self.mouse_left_up(),
                 _ => vec![],
             },
@@ -73,7 +73,11 @@ impl Controller {
                         return vec![];
                     }
                 };
-                *current_pos = mouse_world_pos;
+                // let (pos, area) = render.clamp_shape_pos(mouse_world_pos);
+                // *current_pos = pos;
+                // match area {
+
+                // }
                 vec![]
             }
         }

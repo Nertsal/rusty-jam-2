@@ -2,6 +2,10 @@ use super::*;
 
 use model::*;
 
+mod layout;
+
+use layout::*;
+
 pub type Coord = R32;
 
 pub struct Storage<T>(HashMap<Id, T>);
@@ -27,9 +31,11 @@ impl<T> Storage<T> {
 pub struct Render {
     geng: Geng,
     assets: Rc<Assets>,
+    relative_layout: RelativeLayout,
+    pub layout: Layout,
     pub positions: Storage<Vec2<Coord>>,
-    pub camera: Camera2d,
-    pub framebuffer_size: Vec2<f32>,
+    camera: Camera2d,
+    framebuffer_size: Vec2<f32>,
 }
 
 impl Render {
@@ -43,6 +49,8 @@ impl Render {
         Self {
             geng: geng.clone(),
             assets: assets.clone(),
+            relative_layout: RelativeLayout::new(),
+            layout: RelativeLayout::new().adapt(AABB::ZERO.extend_uniform(1.0)),
             positions: Storage::new(),
             camera: Camera2d {
                 center: vec2(0.0, 0.0),
@@ -56,34 +64,32 @@ impl Render {
     pub fn draw(&mut self, model: &Model, framebuffer: &mut ugli::Framebuffer) {
         let framebuffer_size = framebuffer.size().map(|x| x as f32);
         self.framebuffer_size = framebuffer_size;
-        let camera_center = Vec2::ZERO;
-        let camera_width = self.camera.fov / framebuffer_size.y * framebuffer_size.x;
-        let bounds =
-            AABB::point(camera_center).extend_symmetric(vec2(camera_width, self.camera.fov) / 2.0);
 
-        let relative_v2 = |x, y| vec2(x, y) * bounds.size() + bounds.bottom_left();
+        let bounds = AABB::point(self.camera.center).extend_symmetric(
+            vec2(
+                self.camera.fov / framebuffer_size.y * framebuffer_size.x,
+                self.camera.fov,
+            ) / 2.0,
+        );
 
-        const DANGER_ZONE: f32 = 0.2;
+        self.layout = self.relative_layout.adapt(bounds);
+        let layout = &self.layout;
+
+        let active_shapes = layout.active_shapes_a.join(&layout.active_shapes_b);
         draw_2d::Segment::new(
-            Segment::new(
-                relative_v2(0.5 - DANGER_ZONE, 0.0),
-                relative_v2(0.5 - DANGER_ZONE, 1.0),
-            ),
+            Segment::new(active_shapes.point(0.0, 0.0), active_shapes.point(0.0, 1.0)),
             0.01 * bounds.width(),
             Color::GRAY,
         )
         .draw_2d(&self.geng, framebuffer, &self.camera);
         draw_2d::Segment::new(
-            Segment::new(relative_v2(0.5, 0.0), relative_v2(0.5, 1.0)),
+            Segment::new(active_shapes.point(0.5, 0.0), active_shapes.point(0.5, 1.0)),
             0.02 * bounds.width(),
             Color::rgb(0.2, 0.2, 0.2),
         )
         .draw_2d(&self.geng, framebuffer, &self.camera);
         draw_2d::Segment::new(
-            Segment::new(
-                relative_v2(0.5 + DANGER_ZONE, 0.0),
-                relative_v2(0.5 + DANGER_ZONE, 1.0),
-            ),
+            Segment::new(active_shapes.point(1.0, 0.0), active_shapes.point(1.0, 1.0)),
             0.01 * bounds.width(),
             Color::GRAY,
         )
@@ -97,17 +103,8 @@ impl Render {
             framebuffer,
         );
 
-        let buffer_bounds = AABB::from_corners(
-            vec2(0.05, 0.3) * bounds.size(),
-            vec2(0.2, 0.7) * bounds.size(),
-        )
-        .translate(bounds.bottom_left());
         for shape in &model.player_a.shape_buffer.0 {
-            let random_pos = vec2(
-                global_rng().gen_range(buffer_bounds.x_min..=buffer_bounds.x_max),
-                global_rng().gen_range(buffer_bounds.y_min..=buffer_bounds.y_max),
-            )
-            .map(|x| r32(x));
+            let random_pos = random_point_in(layout.shape_buffer_a.0).map(|x| r32(x));
             let position = *self.positions.get_or_default(shape.id, random_pos);
             draw_shape(
                 position.map(|x| x.as_f32()),
@@ -119,14 +116,8 @@ impl Render {
             );
         }
 
-        let active_bounds =
-            AABB::from_corners(relative_v2(0.5 - DANGER_ZONE, 0.3), relative_v2(0.45, 0.7));
         for shape in &model.player_a.active_shapes.0 {
-            let random_pos = vec2(
-                global_rng().gen_range(active_bounds.x_min..=active_bounds.x_max),
-                global_rng().gen_range(active_bounds.y_min..=active_bounds.y_max),
-            )
-            .map(|x| r32(x));
+            let random_pos = random_point_in(layout.active_shapes_a.0).map(|x| r32(x));
             let position = *self.positions.get_or_default(shape.id, random_pos);
             draw_shape(
                 position.map(|x| x.as_f32()),
@@ -140,6 +131,13 @@ impl Render {
     }
 }
 
+pub fn random_point_in(aabb: AABB<f32>) -> Vec2<f32> {
+    vec2(
+        global_rng().gen_range(aabb.x_min..=aabb.x_max),
+        global_rng().gen_range(aabb.y_min..=aabb.y_max),
+    )
+}
+
 pub fn draw_farm(
     farm: &ShapeFarm,
     bounds: AABB<f32>,
@@ -149,7 +147,7 @@ pub fn draw_farm(
 ) {
     for (index, plant) in farm.plants.iter().enumerate() {
         let bounding_box =
-            AABB::points_bounding_box(plant.shape.0.iter().map(|pos| pos.to_cartesian())); // TODO: avoid panick when shape has no points
+            AABB::points_bounding_box(plant.shape.0.iter().map(|pos| pos.to_cartesian())); // TODO: avoid panic when shape has no points
         let scale = r32(1.0)
             / bounding_box
                 .width()
