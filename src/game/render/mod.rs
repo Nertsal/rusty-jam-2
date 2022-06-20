@@ -110,6 +110,7 @@ impl Render {
                 position.map(|x| x.as_f32()),
                 &shape.shape.0,
                 1.0,
+                Color::GRAY,
                 &self.camera,
                 &self.geng,
                 framebuffer,
@@ -123,6 +124,7 @@ impl Render {
                 position.map(|x| x.as_f32()),
                 &shape.shape.0,
                 1.0,
+                Color::BLUE,
                 &self.camera,
                 &self.geng,
                 framebuffer,
@@ -161,6 +163,7 @@ pub fn draw_farm(
             bounds.bottom_left() + vec2(0.1 * (index as f32 + 1.0), 0.1) * bounds.size(),
             plant.shape.0.iter().take(draw_count),
             scale.as_f32(),
+            Color::GREEN,
             camera,
             geng,
             framebuffer,
@@ -172,6 +175,7 @@ pub fn draw_shape<'a>(
     offset: Vec2<f32>,
     shape: impl IntoIterator<Item = &'a TriPos>,
     scale: f32,
+    color: Color<f32>,
     camera: &Camera2d,
     geng: &Geng,
     framebuffer: &mut ugli::Framebuffer,
@@ -182,6 +186,6 @@ pub fn draw_shape<'a>(
             .into_iter()
             .map(|pos| pos.map(|x| x.as_f32()) * scale + offset)
             .collect();
-        draw_2d::Polygon::new(vertices, Color::GREEN).draw_2d(geng, framebuffer, camera);
+        draw_2d::Polygon::new(vertices, color).draw_2d(geng, framebuffer, camera);
     }
 }

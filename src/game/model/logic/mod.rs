@@ -26,9 +26,17 @@ impl Model {
         }
     }
 
-    fn activate_shape(&mut self, shape_id: Id) {}
+    fn activate_shape(&mut self, shape_id: Id) {
+        if let Some(shape) = self.player_a.shape_buffer.0.remove(&shape_id) {
+            self.player_a.active_shapes.0.insert(shape);
+        }
+    }
 
-    fn deactivate_shape(&mut self, shape_id: Id) {}
+    fn deactivate_shape(&mut self, shape_id: Id) {
+        if let Some(shape) = self.player_a.active_shapes.0.remove(&shape_id) {
+            self.player_a.shape_buffer.0.insert(shape);
+        }
+    }
 }
 
 impl Plant {

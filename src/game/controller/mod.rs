@@ -71,13 +71,13 @@ impl Controller {
                     .shape_buffer_a
                     .join(&render.layout.active_shapes_a);
                 let pos = bounds.clamp_point(mouse_world_pos.map(|x| x.as_f32()));
-                let action = {
+                let actions = {
                     if render.layout.shape_buffer_a.contains(pos) {
-                        PlayerAction::DeactivateShape(shape_id)
+                        vec![PlayerAction::DeactivateShape(shape_id)]
                     } else if render.layout.active_shapes_a.contains(pos) {
-                        PlayerAction::ActivateShape(shape_id)
+                        vec![PlayerAction::ActivateShape(shape_id)]
                     } else {
-                        PlayerAction::DeactivateShape(shape_id)
+                        vec![]
                     }
                 };
                 let current_pos = match render.positions.get_mut(shape_id) {
@@ -88,7 +88,7 @@ impl Controller {
                     }
                 };
                 *current_pos = pos.map(r32);
-                vec![action]
+                actions
             }
         }
     }

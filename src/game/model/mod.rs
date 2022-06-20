@@ -25,7 +25,6 @@ pub struct Model {
     id_gen: IdGenerator,
     pub player_a: Player,
     pub player_b: Player,
-    pub grabbed_shape: Option<GrabbedShape>,
 }
 
 #[derive(Debug, Clone)]
@@ -81,7 +80,6 @@ impl Model {
             id_gen: IdGenerator::new(),
             player_a: Player::new(),
             player_b: Player::new(),
-            grabbed_shape: None,
         }
     }
 }
