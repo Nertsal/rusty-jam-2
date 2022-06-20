@@ -57,6 +57,23 @@ impl Area {
         })
     }
 
+    pub fn clamp_point(&self, point: Vec2<f32>) -> Vec2<f32> {
+        point.clamp_aabb(self.0)
+    }
+
+    pub fn contains(&self, point: Vec2<f32>) -> bool {
+        self.0.contains(point)
+    }
+
+    pub fn join(&self, other: &Self) -> Self {
+        Self(AABB {
+            x_min: self.0.x_min.min(other.0.x_min),
+            x_max: self.0.x_max.max(other.0.x_max),
+            y_min: self.0.y_min.min(other.0.y_min),
+            y_max: self.0.y_max.max(other.0.y_max),
+        })
+    }
+
     pub fn point(&self, x: f32, y: f32) -> Vec2<f32> {
         vec2(self.x(x), self.y(y))
     }
@@ -67,14 +84,5 @@ impl Area {
 
     pub fn y(&self, y: f32) -> f32 {
         y * self.0.height() + self.0.y_min
-    }
-
-    pub fn join(&self, other: &Self) -> Self {
-        Self(AABB {
-            x_min: self.0.x_min.min(other.0.x_min),
-            x_max: self.0.x_max.max(other.0.x_max),
-            y_min: self.0.y_min.min(other.0.y_min),
-            y_max: self.0.y_max.max(other.0.y_max),
-        })
     }
 }

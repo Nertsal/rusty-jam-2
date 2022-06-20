@@ -42,7 +42,7 @@ impl Render {
     pub fn screen_to_world(&self, screen_pos: Vec2<f64>) -> Vec2<R32> {
         self.camera
             .screen_to_world(self.framebuffer_size, screen_pos.map(|x| x as _))
-            .map(|x| r32(x))
+            .map(r32)
     }
 
     pub fn new(geng: &Geng, assets: &Rc<Assets>) -> Self {
@@ -104,7 +104,7 @@ impl Render {
         );
 
         for shape in &model.player_a.shape_buffer.0 {
-            let random_pos = random_point_in(layout.shape_buffer_a.0).map(|x| r32(x));
+            let random_pos = random_point_in(layout.shape_buffer_a.0).map(r32);
             let position = *self.positions.get_or_default(shape.id, random_pos);
             draw_shape(
                 position.map(|x| x.as_f32()),
@@ -117,7 +117,7 @@ impl Render {
         }
 
         for shape in &model.player_a.active_shapes.0 {
-            let random_pos = random_point_in(layout.active_shapes_a.0).map(|x| r32(x));
+            let random_pos = random_point_in(layout.active_shapes_a.0).map(r32);
             let position = *self.positions.get_or_default(shape.id, random_pos);
             draw_shape(
                 position.map(|x| x.as_f32()),

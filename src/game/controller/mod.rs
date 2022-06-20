@@ -66,6 +66,20 @@ impl Controller {
         match dragging {
             &mut Dragging::Shape(shape_id) => {
                 // Move the shape
+                let bounds = render
+                    .layout
+                    .shape_buffer_a
+                    .join(&render.layout.active_shapes_a);
+                let pos = bounds.clamp_point(mouse_world_pos.map(|x| x.as_f32()));
+                let action = {
+                    if render.layout.shape_buffer_a.contains(pos) {
+                        PlayerAction::DeactivateShape(shape_id)
+                    } else if render.layout.active_shapes_a.contains(pos) {
+                        PlayerAction::ActivateShape(shape_id)
+                    } else {
+                        PlayerAction::DeactivateShape(shape_id)
+                    }
+                };
                 let current_pos = match render.positions.get_mut(shape_id) {
                     Some(pos) => pos,
                     None => {
@@ -73,12 +87,8 @@ impl Controller {
                         return vec![];
                     }
                 };
-                // let (pos, area) = render.clamp_shape_pos(mouse_world_pos);
-                // *current_pos = pos;
-                // match area {
-
-                // }
-                vec![]
+                *current_pos = pos.map(r32);
+                vec![action]
             }
         }
     }
