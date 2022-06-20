@@ -30,6 +30,10 @@ impl Controller {
                 geng::MouseButton::Left => self.mouse_left_down(model, render, position),
                 _ => None,
             },
+            geng::Event::MouseUp { position, button } => match button {
+                geng::MouseButton::Left => self.mouse_left_up(model, render, position),
+                _ => None,
+            },
             _ => None,
         }
     }
@@ -53,5 +57,14 @@ impl Controller {
             }
         }
         None
+    }
+
+    fn mouse_left_up(
+        &mut self,
+        model: &Model,
+        render: &Render,
+        position: Vec2<f64>,
+    ) -> Option<PlayerAction> {
+        Some(PlayerAction::ReleaseGrabbed)
     }
 }

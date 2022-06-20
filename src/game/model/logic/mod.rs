@@ -13,6 +13,14 @@ impl Model {
             }
         }
     }
+
+    pub fn handle_player_action(&mut self, action: PlayerAction) {
+        match action {
+            PlayerAction::GrabShape(_) => todo!(),
+            PlayerAction::ReleaseGrabbed => todo!(),
+            PlayerAction::EndTurn => self.tick(),
+        }
+    }
 }
 
 impl Plant {

@@ -16,6 +16,7 @@ pub struct Game {
 
 pub enum PlayerAction {
     GrabShape(Id),
+    ReleaseGrabbed,
     EndTurn,
 }
 
@@ -40,12 +41,7 @@ impl geng::State for Game {
             .controller
             .handle_event(&self.model, &self.render, event)
         {
-            match action {
-                PlayerAction::GrabShape(shape_id) => todo!(),
-                PlayerAction::EndTurn => {
-                    self.model.tick();
-                }
-            }
+            self.model.handle_player_action(action);
         }
     }
 
