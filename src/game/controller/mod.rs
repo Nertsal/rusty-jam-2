@@ -18,32 +18,32 @@ impl Controller {
     pub fn handle_event(
         &mut self,
         model: &Model,
-        render: &Render,
+        render: &mut Render,
         event: geng::Event,
-    ) -> Option<PlayerAction> {
+    ) -> Vec<PlayerAction> {
         match event {
             geng::Event::KeyDown { key } => match key {
-                geng::Key::Enter => Some(PlayerAction::EndTurn),
-                _ => None,
+                geng::Key::Enter => vec![PlayerAction::EndTurn],
+                _ => vec![],
             },
             geng::Event::MouseDown { position, button } => match button {
                 geng::MouseButton::Left => self.mouse_left_down(model, render, position),
-                _ => None,
+                _ => vec![],
             },
             geng::Event::MouseUp { position, button } => match button {
                 geng::MouseButton::Left => self.mouse_left_up(model, render, position),
-                _ => None,
+                _ => vec![],
             },
-            _ => None,
+            _ => vec![],
         }
     }
 
     fn mouse_left_down(
         &mut self,
         model: &Model,
-        render: &Render,
+        render: &mut Render,
         position: Vec2<f64>,
-    ) -> Option<PlayerAction> {
+    ) -> Vec<PlayerAction> {
         let mouse_world_pos = render
             .camera
             .screen_to_world(render.framebuffer_size, position.map(|x| x as _))
@@ -52,19 +52,21 @@ impl Controller {
             if let Some(&shape_pos) = render.positions.get(shape.id) {
                 if shape.shape.contains(mouse_world_pos - shape_pos) {
                     self.dragging = Some(Dragging::Shape(shape.id));
-                    return Some(PlayerAction::GrabShape(shape.id));
+                    // TODO: grab in render
+                    return vec![];
                 }
             }
         }
-        None
+        vec![]
     }
 
     fn mouse_left_up(
         &mut self,
         model: &Model,
-        render: &Render,
+        render: &mut Render,
         position: Vec2<f64>,
-    ) -> Option<PlayerAction> {
-        Some(PlayerAction::ReleaseGrabbed)
+    ) -> Vec<PlayerAction> {
+        // TODO: release in render
+        vec![]
     }
 }

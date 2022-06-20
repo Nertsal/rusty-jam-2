@@ -15,8 +15,8 @@ pub struct Game {
 }
 
 pub enum PlayerAction {
-    GrabShape(Id),
-    ReleaseGrabbed,
+    ActivateShape(Id),
+    DeactivateShape(Id),
     EndTurn,
 }
 
@@ -37,9 +37,9 @@ impl geng::State for Game {
     }
 
     fn handle_event(&mut self, event: geng::Event) {
-        if let Some(action) = self
+        for action in self
             .controller
-            .handle_event(&self.model, &self.render, event)
+            .handle_event(&self.model, &mut self.render, event)
         {
             self.model.handle_player_action(action);
         }

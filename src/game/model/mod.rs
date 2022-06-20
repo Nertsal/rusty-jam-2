@@ -25,6 +25,12 @@ pub struct Model {
     id_gen: IdGenerator,
     pub player_a: Player,
     pub player_b: Player,
+    pub grabbed_shape: Option<GrabbedShape>,
+}
+
+#[derive(Debug, Clone)]
+pub struct GrabbedShape {
+    pub shape: AliveShape,
 }
 
 /// A position in a triangular grid
@@ -52,7 +58,7 @@ pub struct AliveShape {
 }
 
 #[derive(Debug)]
-pub struct ShapeBuffer(pub Vec<AliveShape>);
+pub struct ShapeBuffer(pub Collection<AliveShape>);
 
 #[derive(Debug)]
 pub struct ShapeFarm {
@@ -60,7 +66,7 @@ pub struct ShapeFarm {
 }
 
 #[derive(Debug)]
-pub struct ActiveShapes(pub Vec<AliveShape>);
+pub struct ActiveShapes(pub Collection<AliveShape>);
 
 #[derive(Debug, Clone)]
 pub struct Plant {
@@ -75,6 +81,7 @@ impl Model {
             id_gen: IdGenerator::new(),
             player_a: Player::new(),
             player_b: Player::new(),
+            grabbed_shape: None,
         }
     }
 }
@@ -91,7 +98,7 @@ impl Player {
 
 impl ShapeBuffer {
     pub fn new() -> Self {
-        Self(vec![])
+        Self(Default::default())
     }
 }
 
@@ -105,7 +112,7 @@ impl ShapeFarm {
 
 impl ActiveShapes {
     pub fn new() -> Self {
-        Self(vec![])
+        Self(Default::default())
     }
 }
 
@@ -116,5 +123,13 @@ impl Plant {
             shape,
             cooldown,
         }
+    }
+}
+
+impl HasId for AliveShape {
+    type Id = Id;
+
+    fn id(&self) -> &Self::Id {
+        &self.id
     }
 }
