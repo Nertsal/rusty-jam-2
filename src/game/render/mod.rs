@@ -15,12 +15,12 @@ impl<T> Storage<T> {
         self.0.get(&id)
     }
 
-    pub fn get_or_default(&mut self, id: Id, default: T) -> &T {
-        self.0.entry(id).or_insert(default)
+    pub fn get_mut(&mut self, id: Id) -> Option<&mut T> {
+        self.0.get_mut(&id)
     }
 
-    pub fn set(&mut self, id: Id, value: T) {
-        self.0.insert(id, value);
+    pub fn get_or_default(&mut self, id: Id, default: T) -> &T {
+        self.0.entry(id).or_insert(default)
     }
 }
 
@@ -33,6 +33,12 @@ pub struct Render {
 }
 
 impl Render {
+    pub fn screen_to_world(&self, screen_pos: Vec2<f64>) -> Vec2<R32> {
+        self.camera
+            .screen_to_world(self.framebuffer_size, screen_pos.map(|x| x as _))
+            .map(|x| r32(x))
+    }
+
     pub fn new(geng: &Geng, assets: &Rc<Assets>) -> Self {
         Self {
             geng: geng.clone(),

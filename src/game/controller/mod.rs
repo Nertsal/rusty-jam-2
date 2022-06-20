@@ -30,8 +30,9 @@ impl Controller {
                 geng::MouseButton::Left => self.mouse_left_down(model, render, position),
                 _ => vec![],
             },
+            geng::Event::MouseMove { position, .. } => self.mouse_move(render, position),
             geng::Event::MouseUp { position, button } => match button {
-                geng::MouseButton::Left => self.mouse_left_up(model, render, position),
+                geng::MouseButton::Left => self.mouse_left_up(),
                 _ => vec![],
             },
             _ => vec![],
@@ -44,15 +45,11 @@ impl Controller {
         render: &mut Render,
         position: Vec2<f64>,
     ) -> Vec<PlayerAction> {
-        let mouse_world_pos = render
-            .camera
-            .screen_to_world(render.framebuffer_size, position.map(|x| x as _))
-            .map(|x| r32(x));
+        let mouse_world_pos = render.screen_to_world(position);
         for shape in &model.player_a.shape_buffer.0 {
             if let Some(&shape_pos) = render.positions.get(shape.id) {
                 if shape.shape.contains(mouse_world_pos - shape_pos) {
                     self.dragging = Some(Dragging::Shape(shape.id));
-                    // TODO: grab in render
                     return vec![];
                 }
             }
@@ -60,13 +57,30 @@ impl Controller {
         vec![]
     }
 
-    fn mouse_left_up(
-        &mut self,
-        model: &Model,
-        render: &mut Render,
-        position: Vec2<f64>,
-    ) -> Vec<PlayerAction> {
-        // TODO: release in render
+    fn mouse_move(&mut self, render: &mut Render, position: Vec2<f64>) -> Vec<PlayerAction> {
+        let dragging = match &mut self.dragging {
+            Some(d) => d,
+            None => return vec![],
+        };
+        let mouse_world_pos = render.screen_to_world(position);
+        match dragging {
+            &mut Dragging::Shape(shape_id) => {
+                // Move the shape
+                let current_pos = match render.positions.get_mut(shape_id) {
+                    Some(pos) => pos,
+                    None => {
+                        self.dragging = None;
+                        return vec![];
+                    }
+                };
+                *current_pos = mouse_world_pos;
+                vec![]
+            }
+        }
+    }
+
+    fn mouse_left_up(&mut self) -> Vec<PlayerAction> {
+        self.dragging.take();
         vec![]
     }
 }
