@@ -10,19 +10,33 @@ pub struct RelativeLayout(Layout);
 pub struct Layout {
     pub shape_buffer_a: Area,
     pub active_shapes_a: Area,
+    pub shape_farm_a: Area,
     pub shape_buffer_b: Area,
     pub active_shapes_b: Area,
+    pub shape_farm_b: Area,
 }
 
 impl RelativeLayout {
     pub fn new() -> Self {
-        // Relative values
         const DANGER_ZONE: f32 = 0.2;
+
+        let flip = |area: &Area| {
+            Area::new(
+                (1.0 - area.0.x_max, area.0.y_min),
+                (1.0 - area.0.x_min, area.0.y_max),
+            )
+        };
+
+        let shape_buffer_a = Area::new((0.05, 0.3), (0.2, 0.7));
+        let active_shapes_a = Area::new((0.5 - DANGER_ZONE, 0.3), (0.45, 0.7));
+        let shape_farm_a = Area::new((0.05, 0.1), (0.2, 0.25));
         Self(Layout {
-            shape_buffer_a: Area::new((0.05, 0.3), (0.2, 0.7)),
-            active_shapes_a: Area::new((0.5 - DANGER_ZONE, 0.3), (0.45, 0.7)),
-            shape_buffer_b: Area::new((0.8, 0.3), (0.95, 0.7)),
-            active_shapes_b: Area::new((0.55, 0.3), (0.5 + DANGER_ZONE, 0.7)),
+            shape_buffer_b: flip(&shape_buffer_a),
+            active_shapes_b: flip(&active_shapes_a),
+            shape_farm_b: flip(&shape_farm_a),
+            shape_buffer_a,
+            active_shapes_a,
+            shape_farm_a,
         })
     }
 
@@ -32,8 +46,10 @@ impl RelativeLayout {
         Layout {
             shape_buffer_a: adapt(layout.shape_buffer_a),
             active_shapes_a: adapt(layout.active_shapes_a),
+            shape_farm_a: adapt(layout.shape_farm_a),
             shape_buffer_b: adapt(layout.shape_buffer_b),
             active_shapes_b: adapt(layout.active_shapes_b),
+            shape_farm_b: adapt(layout.shape_farm_b),
         }
     }
 }

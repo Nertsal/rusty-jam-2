@@ -20,6 +20,21 @@ impl IdGenerator {
     }
 }
 
+pub enum PlayerAction {
+    ActivateShape(Id),
+    DeactivateShape(Id),
+    AttachShape {
+        triangle: Id,
+        target: Id,
+        pos: TriPos,
+    },
+    UpgradeFarm {
+        source_shape: Id,
+        target_plant: Id,
+    },
+    EndTurn,
+}
+
 #[derive(Debug)]
 pub struct Model {
     id_gen: IdGenerator,
@@ -69,6 +84,7 @@ pub struct ActiveShapes(pub Collection<AliveShape>);
 
 #[derive(Debug, Clone)]
 pub struct Plant {
+    pub id: Id,
     pub shape: Shape,
     pub cooldown: Turns,
     pub time_left: Turns,
@@ -76,19 +92,20 @@ pub struct Plant {
 
 impl Model {
     pub fn new() -> Self {
+        let mut id_gen = IdGenerator::new();
         Self {
-            id_gen: IdGenerator::new(),
-            player_a: Player::new(),
-            player_b: Player::new(),
+            player_a: Player::new(&mut id_gen),
+            player_b: Player::new(&mut id_gen),
+            id_gen,
         }
     }
 }
 
 impl Player {
-    pub fn new() -> Self {
+    pub fn new(id_gen: &mut IdGenerator) -> Self {
         Self {
             shape_buffer: ShapeBuffer::new(),
-            farm: ShapeFarm::new(),
+            farm: ShapeFarm::new(id_gen),
             active_shapes: ActiveShapes::new(),
         }
     }
@@ -101,9 +118,13 @@ impl ShapeBuffer {
 }
 
 impl ShapeFarm {
-    pub fn new() -> Self {
+    pub fn new(id_gen: &mut IdGenerator) -> Self {
         Self {
-            plants: vec![Plant::new(Shape(vec![TriPos { x: 0, y: 0 }]), 1)],
+            plants: vec![Plant::new(
+                id_gen.next(),
+                Shape(vec![TriPos { x: 0, y: 0 }]),
+                1,
+            )],
         }
     }
 }
@@ -115,9 +136,10 @@ impl ActiveShapes {
 }
 
 impl Plant {
-    pub fn new(shape: Shape, cooldown: Turns) -> Self {
+    pub fn new(id: Id, shape: Shape, cooldown: Turns) -> Self {
         Self {
             time_left: cooldown,
+            id,
             shape,
             cooldown,
         }

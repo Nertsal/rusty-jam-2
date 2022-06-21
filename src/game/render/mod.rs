@@ -26,6 +26,10 @@ impl<T> Storage<T> {
     pub fn get_or_default(&mut self, id: Id, default: T) -> &T {
         self.0.entry(id).or_insert(default)
     }
+
+    pub fn insert(&mut self, id: Id, value: T) {
+        self.0.insert(id, value);
+    }
 }
 
 pub struct Render {
@@ -34,6 +38,7 @@ pub struct Render {
     relative_layout: RelativeLayout,
     pub layout: Layout,
     pub positions: Storage<Vec2<Coord>>,
+    pub scales: Storage<Coord>,
     camera: Camera2d,
     framebuffer_size: Vec2<f32>,
 }
@@ -52,6 +57,7 @@ impl Render {
             relative_layout: RelativeLayout::new(),
             layout: RelativeLayout::new().adapt(AABB::ZERO.extend_uniform(1.0)),
             positions: Storage::new(),
+            scales: Storage::new(),
             camera: Camera2d {
                 center: vec2(0.0, 0.0),
                 rotation: 0.0,
@@ -95,13 +101,31 @@ impl Render {
         )
         .draw_2d(&self.geng, framebuffer, &self.camera);
 
-        draw_farm(
-            &model.player_a.farm,
-            bounds,
-            &self.camera,
-            &self.geng,
-            framebuffer,
-        );
+        for plant in &model.player_a.farm.plants {
+            let random_pos = random_point_in(layout.shape_farm_a.0).map(r32);
+            let position = *self.positions.get_or_default(plant.id, random_pos);
+            let bounding_box =
+                AABB::points_bounding_box(plant.shape.0.iter().map(|pos| pos.to_cartesian())); // TODO: avoid panic when shape has no points
+            let scale = r32(1.0)
+                / bounding_box
+                    .width()
+                    .max(bounding_box.height())
+                    .max(r32(1.0));
+            self.scales.insert(plant.id, scale);
+            let draw_count = ((1.0
+                - (plant.time_left as f32 / plant.cooldown as f32) * plant.shape.0.len() as f32)
+                .floor() as usize)
+                .max(1);
+            draw_shape(
+                position.map(|x| x.as_f32()),
+                plant.shape.0.iter().take(draw_count),
+                scale.as_f32(),
+                Color::GREEN,
+                &self.camera,
+                &self.geng,
+                framebuffer,
+            );
+        }
 
         for shape in &model.player_a.shape_buffer.0 {
             let random_pos = random_point_in(layout.shape_buffer_a.0).map(r32);
@@ -138,37 +162,6 @@ pub fn random_point_in(aabb: AABB<f32>) -> Vec2<f32> {
         global_rng().gen_range(aabb.x_min..=aabb.x_max),
         global_rng().gen_range(aabb.y_min..=aabb.y_max),
     )
-}
-
-pub fn draw_farm(
-    farm: &ShapeFarm,
-    bounds: AABB<f32>,
-    camera: &Camera2d,
-    geng: &Geng,
-    framebuffer: &mut ugli::Framebuffer,
-) {
-    for (index, plant) in farm.plants.iter().enumerate() {
-        let bounding_box =
-            AABB::points_bounding_box(plant.shape.0.iter().map(|pos| pos.to_cartesian())); // TODO: avoid panic when shape has no points
-        let scale = r32(1.0)
-            / bounding_box
-                .width()
-                .max(bounding_box.height())
-                .max(r32(1.0));
-        let draw_count = ((1.0
-            - (plant.time_left as f32 / plant.cooldown as f32) * plant.shape.0.len() as f32)
-            .floor() as usize)
-            .max(1);
-        draw_shape(
-            bounds.bottom_left() + vec2(0.1 * (index as f32 + 1.0), 0.1) * bounds.size(),
-            plant.shape.0.iter().take(draw_count),
-            scale.as_f32(),
-            Color::GREEN,
-            camera,
-            geng,
-            framebuffer,
-        );
-    }
 }
 
 pub fn draw_shape<'a>(

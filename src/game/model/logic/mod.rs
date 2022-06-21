@@ -18,6 +18,10 @@ impl Model {
                 target,
                 pos,
             } => self.attach_shape(triangle, target, pos),
+            PlayerAction::UpgradeFarm {
+                source_shape,
+                target_plant: target_farm,
+            } => self.upgrade_farm(source_shape, target_farm),
         }
     }
 
@@ -72,6 +76,10 @@ impl Model {
             .0
             .remove(&triangle)
             .expect("Attached triangle disappeared");
+    }
+
+    fn upgrade_farm(&mut self, source_shape: Id, target_farm: Id) {
+        todo!()
     }
 }
 

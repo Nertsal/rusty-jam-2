@@ -74,13 +74,38 @@ impl Controller {
                 let bounds = render
                     .layout
                     .shape_buffer_a
-                    .join(&render.layout.active_shapes_a);
+                    .join(&render.layout.active_shapes_a)
+                    .join(&render.layout.shape_farm_a);
                 let pos = bounds.clamp_point(mouse_world_pos.map(|x| x.as_f32()));
                 let actions = {
                     if render.layout.shape_buffer_a.contains(pos) {
                         vec![PlayerAction::DeactivateShape(shape_id)]
                     } else if render.layout.active_shapes_a.contains(pos) {
                         vec![PlayerAction::ActivateShape(shape_id)]
+                    } else if render.layout.shape_farm_a.contains(pos) {
+                        let mut upgradable_plants = model
+                            .player_a
+                            .farm
+                            .plants
+                            .iter()
+                            .filter_map(|plant| {
+                                render.positions.get(plant.id).and_then(|pos| {
+                                    render.scales.get(plant.id).map(|scale| (pos, scale, plant))
+                                })
+                            })
+                            .filter(|(pos, scale, plant)| {
+                                plant.shape.contains((mouse_world_pos - **pos) / **scale)
+                            })
+                            .map(|(_, _, plant)| plant.id);
+                        upgradable_plants
+                            .next()
+                            .map(|plant_id| {
+                                vec![PlayerAction::UpgradeFarm {
+                                    source_shape: shape_id,
+                                    target_plant: plant_id,
+                                }]
+                            })
+                            .unwrap_or(vec![])
                     } else {
                         vec![]
                     }

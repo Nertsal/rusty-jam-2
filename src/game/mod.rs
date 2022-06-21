@@ -14,17 +14,6 @@ pub struct Game {
     controller: Controller,
 }
 
-pub enum PlayerAction {
-    ActivateShape(Id),
-    DeactivateShape(Id),
-    AttachShape {
-        triangle: Id,
-        target: Id,
-        pos: TriPos,
-    },
-    EndTurn,
-}
-
 impl Game {
     pub fn new(geng: &Geng, assets: &Rc<Assets>) -> Self {
         Self {
