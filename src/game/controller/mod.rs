@@ -100,7 +100,7 @@ impl Controller {
                         upgradable_plants
                             .next()
                             .map(|plant_id| {
-                                vec![PlayerAction::UpgradeFarm {
+                                vec![PlayerAction::UpgradePlant {
                                     source_shape: shape_id,
                                     target_plant: plant_id,
                                 }]

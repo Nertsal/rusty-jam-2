@@ -18,7 +18,7 @@ impl Model {
                 target,
                 pos,
             } => self.attach_shape(triangle, target, pos),
-            PlayerAction::UpgradeFarm {
+            PlayerAction::UpgradePlant {
                 source_shape,
                 target_plant: target_farm,
             } => self.upgrade_farm(source_shape, target_farm),

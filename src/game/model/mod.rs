@@ -28,7 +28,7 @@ pub enum PlayerAction {
         target: Id,
         pos: TriPos,
     },
-    UpgradeFarm {
+    UpgradePlant {
         source_shape: Id,
         target_plant: Id,
     },
