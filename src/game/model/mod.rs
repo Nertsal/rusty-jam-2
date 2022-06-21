@@ -1,6 +1,6 @@
 use super::*;
 
-mod logic;
+pub mod logic;
 
 pub type Time = R32;
 pub type Turns = u64;
@@ -33,7 +33,7 @@ pub struct GrabbedShape {
 }
 
 /// A position in a triangular grid
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct TriPos {
     pub x: i64,
     pub y: i64,

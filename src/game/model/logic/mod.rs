@@ -1,4 +1,5 @@
 use super::*;
+use geng::prelude::itertools::Itertools;
 
 mod triangular;
 
@@ -12,6 +13,11 @@ impl Model {
             PlayerAction::EndTurn => self.tick(),
             PlayerAction::ActivateShape(shape_id) => self.activate_shape(shape_id),
             PlayerAction::DeactivateShape(shape_id) => self.deactivate_shape(shape_id),
+            PlayerAction::AttachShape {
+                triangle,
+                target,
+                pos,
+            } => self.attach_shape(triangle, target, pos),
         }
     }
 
@@ -36,6 +42,36 @@ impl Model {
         if let Some(shape) = self.player_a.active_shapes.0.remove(&shape_id) {
             self.player_a.shape_buffer.0.insert(shape);
         }
+    }
+
+    fn attach_shape(&mut self, triangle: Id, target: Id, pos: TriPos) {
+        if self
+            .player_a
+            .active_shapes
+            .0
+            .get(&triangle)
+            .filter(|triangle| triangle.shape.0.len() == 1)
+            .is_none()
+        {
+            return;
+        }
+        let target = match self
+            .player_a
+            .active_shapes
+            .0
+            .get_mut(&target)
+            .filter(|target| target.shape.boundary().contains(&pos))
+        {
+            Some(target) => target,
+            None => return,
+        };
+
+        target.shape.0.push(pos);
+        self.player_a
+            .active_shapes
+            .0
+            .remove(&triangle)
+            .expect("Attached triangle disappeared");
     }
 }
 

@@ -17,6 +17,11 @@ pub struct Game {
 pub enum PlayerAction {
     ActivateShape(Id),
     DeactivateShape(Id),
+    AttachShape {
+        triangle: Id,
+        target: Id,
+        pos: TriPos,
+    },
     EndTurn,
 }
 

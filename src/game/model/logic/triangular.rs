@@ -17,6 +17,19 @@ impl TriPos {
         )
     }
 
+    pub fn neigbours(&self) -> [TriPos; 3] {
+        let dy = if self.is_upside_down() { 1 } else { -1 };
+        [
+            Self { x: 1, y: 0 },
+            Self { x: -1, y: 0 },
+            Self { x: 0, y: dy },
+        ]
+        .map(|Self { x: dx, y: dy }| Self {
+            x: self.x + dx,
+            y: self.y + dy,
+        })
+    }
+
     /// Whether a triangle in that position points down
     pub fn is_upside_down(&self) -> bool {
         (self.x + self.y) % 2 != 0
@@ -50,6 +63,14 @@ impl Shape {
         self.0
             .iter()
             .any(|tri_pos| inside_triangle(pos, tri_pos.to_vertices()))
+    }
+
+    pub fn boundary<'a>(&'a self) -> impl Iterator<Item = TriPos> + 'a {
+        // TODO: optimize
+        self.0
+            .iter()
+            .flat_map(|pos| pos.neigbours())
+            .filter(|pos| !self.0.contains(pos))
     }
 }
 

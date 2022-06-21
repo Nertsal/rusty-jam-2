@@ -30,7 +30,7 @@ impl Controller {
                 geng::MouseButton::Left => self.mouse_left_down(model, render, position),
                 _ => vec![],
             },
-            geng::Event::MouseMove { position, .. } => self.mouse_move(render, position),
+            geng::Event::MouseMove { position, .. } => self.mouse_move(model, render, position),
             geng::Event::MouseUp { button, .. } => match button {
                 geng::MouseButton::Left => self.mouse_left_up(),
                 _ => vec![],
@@ -57,7 +57,12 @@ impl Controller {
         vec![]
     }
 
-    fn mouse_move(&mut self, render: &mut Render, position: Vec2<f64>) -> Vec<PlayerAction> {
+    fn mouse_move(
+        &mut self,
+        model: &Model,
+        render: &mut Render,
+        position: Vec2<f64>,
+    ) -> Vec<PlayerAction> {
         let dragging = match &mut self.dragging {
             Some(d) => d,
             None => return vec![],
@@ -80,6 +85,29 @@ impl Controller {
                         vec![]
                     }
                 };
+                let pos = pos.map(r32);
+
+                let mut attachments = model
+                    .player_a
+                    .active_shapes
+                    .0
+                    .iter()
+                    .filter(|shape| shape.id != shape_id)
+                    .filter_map(|shape| {
+                        render
+                            .positions
+                            .get(shape.id)
+                            .and_then(|&shape_pos| try_attach(pos, &shape.shape, shape_pos))
+                            .map(|pos| (shape.id, pos))
+                    });
+                if let Some((target_id, attach_pos)) = attachments.next() {
+                    return vec![PlayerAction::AttachShape {
+                        triangle: shape_id,
+                        target: target_id,
+                        pos: attach_pos,
+                    }];
+                }
+
                 let current_pos = match render.positions.get_mut(shape_id) {
                     Some(pos) => pos,
                     None => {
@@ -87,7 +115,7 @@ impl Controller {
                         return vec![];
                     }
                 };
-                *current_pos = pos.map(r32);
+                *current_pos = pos;
                 actions
             }
         }
@@ -97,4 +125,10 @@ impl Controller {
         self.dragging.take();
         vec![]
     }
+}
+
+fn try_attach(center: Vec2<R32>, shape: &Shape, shape_pos: Vec2<R32>) -> Option<TriPos> {
+    shape
+        .boundary()
+        .find(|pos| logic::inside_triangle(center, pos.to_vertices().map(|pos| pos + shape_pos)))
 }
