@@ -20,8 +20,8 @@ impl Model {
             } => self.attach_shape(triangle, target, pos),
             PlayerAction::UpgradePlant {
                 source_shape,
-                target_plant: target_farm,
-            } => self.upgrade_farm(source_shape, target_farm),
+                target_plant,
+            } => self.upgrade_plant(source_shape, target_plant),
         }
     }
 
@@ -78,8 +78,28 @@ impl Model {
             .expect("Attached triangle disappeared");
     }
 
-    fn upgrade_farm(&mut self, source_shape: Id, target_farm: Id) {
-        todo!()
+    fn upgrade_plant(&mut self, source_shape: Id, target_plant: Id) {
+        let source = match self.player_a.shape_buffer.0.remove(&source_shape) {
+            Some(source) => source,
+            None => return,
+        };
+        let plant = match self.player_a.farm.plants.get_mut(&target_plant) {
+            Some(farm) => farm,
+            None => return,
+        };
+
+        match source.shape.0.len() {
+            0 => return,
+            1 => {
+                // Increase efficiency
+                todo!()
+            }
+            _ => {
+                // Change shape
+                plant.shape = source.shape.clone();
+                plant.time_left = plant.cooldown;
+            }
+        }
     }
 }
 

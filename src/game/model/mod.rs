@@ -76,7 +76,7 @@ pub struct ShapeBuffer(pub Collection<AliveShape>);
 
 #[derive(Debug)]
 pub struct ShapeFarm {
-    pub plants: Vec<Plant>,
+    pub plants: Collection<Plant>,
 }
 
 #[derive(Debug)]
@@ -119,13 +119,13 @@ impl ShapeBuffer {
 
 impl ShapeFarm {
     pub fn new(id_gen: &mut IdGenerator) -> Self {
-        Self {
-            plants: vec![Plant::new(
-                id_gen.next(),
-                Shape(vec![TriPos { x: 0, y: 0 }]),
-                1,
-            )],
-        }
+        let mut plants = Collection::new();
+        plants.insert(Plant::new(
+            id_gen.next(),
+            Shape(vec![TriPos { x: 0, y: 0 }]),
+            1,
+        ));
+        Self { plants }
     }
 }
 
@@ -148,7 +148,13 @@ impl Plant {
 
 impl HasId for AliveShape {
     type Id = Id;
+    fn id(&self) -> &Self::Id {
+        &self.id
+    }
+}
 
+impl HasId for Plant {
+    type Id = Id;
     fn id(&self) -> &Self::Id {
         &self.id
     }
