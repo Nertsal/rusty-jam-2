@@ -22,11 +22,12 @@ impl Model {
                 source_shape,
                 target_plant,
             } => self.upgrade_plant(source_shape, target_plant),
+            PlayerAction::Attack { weapon, target } => self.attack(weapon, target),
         }
     }
 
     fn tick(&mut self) {
-        for plant in &mut self.player_a.farm.plants {
+        for plant in &mut self.player_a.shape_farm.plants {
             if plant.tick() {
                 self.player_a.shape_buffer.0.insert(AliveShape {
                     id: self.id_gen.next(),
@@ -83,7 +84,7 @@ impl Model {
             Some(source) => source,
             None => return,
         };
-        let plant = match self.player_a.farm.plants.get_mut(&target_plant) {
+        let plant = match self.player_a.shape_farm.plants.get_mut(&target_plant) {
             Some(farm) => farm,
             None => return,
         };
@@ -101,6 +102,8 @@ impl Model {
             }
         }
     }
+
+    fn attack(&mut self, weapon: Id, target: Id) {}
 }
 
 impl Plant {

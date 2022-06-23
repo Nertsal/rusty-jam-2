@@ -32,6 +32,10 @@ pub enum PlayerAction {
         source_shape: Id,
         target_plant: Id,
     },
+    Attack {
+        weapon: Id,
+        target: Id,
+    },
     EndTurn,
 }
 
@@ -57,7 +61,7 @@ pub struct TriPos {
 #[derive(Debug)]
 pub struct Player {
     pub shape_buffer: ShapeBuffer,
-    pub farm: ShapeFarm,
+    pub shape_farm: ShapeFarm,
     pub active_shapes: ActiveShapes,
 }
 
@@ -105,7 +109,7 @@ impl Player {
     pub fn new(id_gen: &mut IdGenerator) -> Self {
         Self {
             shape_buffer: ShapeBuffer::new(),
-            farm: ShapeFarm::new(id_gen),
+            shape_farm: ShapeFarm::new(id_gen),
             active_shapes: ActiveShapes::new(),
         }
     }

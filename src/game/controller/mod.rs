@@ -85,7 +85,7 @@ impl Controller {
                     } else if render.layout.shape_farm_a.contains(pos) {
                         let mut upgradable_plants = model
                             .player_a
-                            .farm
+                            .shape_farm
                             .plants
                             .iter()
                             .filter_map(|plant| {

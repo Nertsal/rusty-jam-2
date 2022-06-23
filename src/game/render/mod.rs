@@ -110,7 +110,7 @@ impl Render {
         )
         .draw_2d(&self.geng, framebuffer, &self.camera);
 
-        for plant in &model.player_a.farm.plants {
+        for plant in &model.player_a.shape_farm.plants {
             let random_pos = random_point_in(layout.shape_farm_a.0).map(r32);
             let position = *self.positions.get_or_default(plant.id, random_pos);
             let bounding_box =
