@@ -69,92 +69,104 @@ impl Controller {
         render: &mut Render,
         position: Vec2<f64>,
     ) -> Vec<PlayerAction> {
-        let dragging = match &mut self.dragging {
-            Some(d) => d,
-            None => return vec![],
-        };
-        let mouse_world_pos = render.screen_to_world(position);
-        match dragging {
-            &mut Dragging::Shape(shape_id) => {
-                // Move the shape
-                let bounds = render
-                    .layout
-                    .shape_buffer_a
-                    .join(&render.layout.active_shapes_a)
-                    .join(&render.layout.shape_farm_a);
-                let pos = bounds.clamp_point(mouse_world_pos.map(|x| x.as_f32()));
-                let actions = {
-                    if render.layout.shape_buffer_a.contains(pos) {
-                        vec![PlayerAction::DeactivateShape(shape_id)]
-                    } else if render.layout.active_shapes_a.contains(pos) {
-                        vec![PlayerAction::ActivateShape(shape_id)]
-                    } else if render.layout.shape_farm_a.contains(pos) {
-                        let mut upgradable_plants = model
-                            .player_a
-                            .shape_farm
-                            .plants
-                            .iter()
-                            .filter_map(|plant| {
-                                render.positions.get(plant.id).and_then(|pos| {
-                                    render.scales.get(plant.id).map(|scale| (pos, scale, plant))
-                                })
-                            })
-                            .filter(|(pos, scale, plant)| {
-                                plant.shape.contains((mouse_world_pos - **pos) / **scale)
-                            })
-                            .map(|(_, _, plant)| plant.id);
-                        upgradable_plants
-                            .next()
-                            .map(|plant_id| {
-                                vec![PlayerAction::UpgradePlant {
-                                    source_shape: shape_id,
-                                    target_plant: plant_id,
-                                }]
-                            })
-                            .unwrap_or(vec![])
-                    } else {
-                        vec![]
-                    }
-                };
-                let pos = pos.map(r32);
-
-                let mut attachments = model
-                    .player_a
-                    .active_shapes
-                    .0
-                    .iter()
-                    .filter(|shape| shape.id != shape_id)
-                    .filter_map(|shape| {
-                        render
-                            .positions
-                            .get(shape.id)
-                            .and_then(|&shape_pos| try_attach(pos, &shape.shape, shape_pos))
-                            .map(|pos| (shape.id, pos))
-                    });
-                if let Some((target_id, attach_pos)) = attachments.next() {
-                    return vec![PlayerAction::AttachShape {
-                        triangle: shape_id,
-                        target: target_id,
-                        pos: attach_pos,
-                    }];
-                }
-
-                let current_pos = match render.positions.get_mut(shape_id) {
-                    Some(pos) => pos,
-                    None => {
-                        self.dragging = None;
-                        return vec![];
-                    }
-                };
-                *current_pos = pos;
-                actions
-            }
+        if let Some(dragging) = self.dragging.take() {
+            let (dragging, actions) = update_drag(dragging, model, render, position);
+            self.dragging = dragging;
+            return actions;
         }
+        vec![]
     }
 
     fn mouse_left_up(&mut self) -> Vec<PlayerAction> {
         self.dragging.take();
         vec![]
+    }
+}
+
+fn update_drag(
+    dragging: Dragging,
+    model: &Model,
+    render: &mut Render,
+    position: Vec2<f64>,
+) -> (Option<Dragging>, Vec<PlayerAction>) {
+    let mouse_world_pos = render.screen_to_world(position);
+    match dragging {
+        Dragging::Shape(shape_id) => {
+            // Move the shape
+            let bounds = render
+                .layout
+                .shape_buffer_a
+                .join(&render.layout.active_shapes_a)
+                .join(&render.layout.shape_farm_a);
+            let pos = bounds.clamp_point(mouse_world_pos.map(|x| x.as_f32()));
+            let actions = {
+                if render.layout.shape_buffer_a.contains(pos) {
+                    vec![PlayerAction::DeactivateShape(shape_id)]
+                } else if render.layout.active_shapes_a.contains(pos) {
+                    vec![PlayerAction::ActivateShape(shape_id)]
+                } else if render.layout.shape_farm_a.contains(pos) {
+                    let mut upgradable_plants = model
+                        .player_a
+                        .shape_farm
+                        .plants
+                        .iter()
+                        .filter_map(|plant| {
+                            render.positions.get(plant.id).and_then(|pos| {
+                                render.scales.get(plant.id).map(|scale| (pos, scale, plant))
+                            })
+                        })
+                        .filter(|(pos, scale, plant)| {
+                            plant.shape.contains((mouse_world_pos - **pos) / **scale)
+                        })
+                        .map(|(_, _, plant)| plant.id);
+                    upgradable_plants
+                        .next()
+                        .map(|plant_id| {
+                            vec![PlayerAction::UpgradePlant {
+                                source_shape: shape_id,
+                                target_plant: plant_id,
+                            }]
+                        })
+                        .unwrap_or(vec![])
+                } else {
+                    vec![]
+                }
+            };
+            let pos = pos.map(r32);
+
+            let mut attachments = model
+                .player_a
+                .active_shapes
+                .0
+                .iter()
+                .filter(|shape| shape.id != shape_id)
+                .filter_map(|shape| {
+                    render
+                        .positions
+                        .get(shape.id)
+                        .and_then(|&shape_pos| try_attach(pos, &shape.shape, shape_pos))
+                        .map(|pos| (shape.id, pos))
+                });
+            if let Some((target_id, attach_pos)) = attachments.next() {
+                return (
+                    Some(dragging),
+                    vec![PlayerAction::AttachShape {
+                        triangle: shape_id,
+                        target: target_id,
+                        pos: attach_pos,
+                    }],
+                );
+            }
+
+            let current_pos = match render.positions.get_mut(shape_id) {
+                Some(pos) => pos,
+                None => {
+                    return (None, vec![]);
+                }
+            };
+            *current_pos = pos;
+            (Some(dragging), actions)
+        }
     }
 }
 
