@@ -97,8 +97,25 @@ impl Model {
         upgrade_impl();
     }
 
-    fn attack(&mut self, weapon: Id, target: Id) {}
+    fn attack(&mut self, weapon: Id, target: Id) {
+        let mut attack_impl = || -> Option<()> {
+            let weapon = &mut self.player_a.active_shapes.0.get_mut(&weapon)?.shape;
+            match self.player_b.active_shapes.0.get_mut(&target) {
+                Some(target_active) => attack_active(weapon, &mut target_active.shape),
+                None => {
+                    let target_plant = &mut self.player_b.shape_farm.plants.get_mut(&target)?;
+                    attack_plant(weapon, target_plant)
+                }
+            }
+            Some(())
+        };
+        attack_impl();
+    }
 }
+
+fn attack_active(weapon: &mut Shape, target: &mut Shape) {todo!()}
+
+fn attack_plant(weapon: &mut Shape, target: &mut Plant) {todo!()}
 
 impl Player {
     fn remove_shape(&mut self, id: Id) -> Option<Shape> {
@@ -110,13 +127,13 @@ impl Player {
     }
 }
 
-    impl Plant {
-        pub fn tick(&mut self) -> bool {
-            if self.time_left <= 0 {
-                self.time_left = self.cooldown;
-                return true;
-            }
-            self.time_left -= 1;
-            false
+impl Plant {
+    pub fn tick(&mut self) -> bool {
+        if self.time_left <= 0 {
+            self.time_left = self.cooldown;
+            return true;
         }
+        self.time_left -= 1;
+        false
     }
+}
