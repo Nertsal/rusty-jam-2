@@ -97,14 +97,45 @@ impl Model {
         upgrade_impl();
     }
 
-    fn attack(&mut self, weapon: Id, target: Id) {
+    fn attack(&mut self, weapon_id: Id, target_id: Id) {
         let mut attack_impl = || -> Option<()> {
-            let weapon = &mut self.player_a.active_shapes.0.get_mut(&weapon)?.shape;
-            match self.player_b.active_shapes.0.get_mut(&target) {
-                Some(target_active) => attack_active(weapon, &mut target_active.shape),
+            let weapon = &mut self.player_a.active_shapes.0.get_mut(&weapon_id)?.shape;
+            match self.player_b.active_shapes.0.get_mut(&target_id) {
+                Some(target_active) => {
+                    let (weapon_alive, target_alive) =
+                        attack_active(weapon, &mut target_active.shape);
+                    if !weapon_alive {
+                        self.player_a
+                            .active_shapes
+                            .0
+                            .remove(&weapon_id)
+                            .expect("Weapon disappeared");
+                    }
+                    if !target_alive {
+                        self.player_b
+                            .active_shapes
+                            .0
+                            .remove(&target_id)
+                            .expect("Target disappeared");
+                    }
+                }
                 None => {
-                    let target_plant = &mut self.player_b.shape_farm.plants.get_mut(&target)?;
-                    attack_plant(weapon, target_plant)
+                    let target_plant = &mut self.player_b.shape_farm.plants.get_mut(&target_id)?;
+                    let (weapon_alive, target_alive) = attack_plant(weapon, target_plant);
+                    if !weapon_alive {
+                        self.player_a
+                            .active_shapes
+                            .0
+                            .remove(&weapon_id)
+                            .expect("Weapon disappeared");
+                    }
+                    if !target_alive {
+                        self.player_b
+                            .shape_farm
+                            .plants
+                            .remove(&target_id)
+                            .expect("Target disappeared");
+                    }
                 }
             }
             Some(())
@@ -113,9 +144,34 @@ impl Model {
     }
 }
 
-fn attack_active(weapon: &mut Shape, target: &mut Shape) {todo!()}
+/// Returns who survived
+fn attack_active(weapon: &mut Shape, target: &mut Shape) -> (bool, bool) {
+    let attack_damage = weapon.0.len();
+    let defense = target.0.len().saturating_sub(1);
+    let survivors = (defense < weapon.0.len(), attack_damage < target.0.len());
+    for _ in 0..attack_damage {
+        target.0.pop();
+    }
+    for _ in 0..defense {
+        weapon.0.pop();
+    }
+    survivors
+}
 
-fn attack_plant(weapon: &mut Shape, target: &mut Plant) {todo!()}
+/// Returns who survived
+fn attack_plant(weapon: &mut Shape, target: &mut Plant) -> (bool, bool) {
+    let attack_damage = weapon.0.len();
+    let defense = target.shape.0.len().saturating_sub(1);
+    let survivors = (
+        defense < weapon.0.len(),
+        attack_damage < target.shape.0.len(),
+    );
+    target.time_left += Turns::try_from(attack_damage).expect("Failed to convert to turns");
+    for _ in 0..defense {
+        weapon.0.pop();
+    }
+    survivors
+}
 
 impl Player {
     fn remove_shape(&mut self, id: Id) -> Option<Shape> {
