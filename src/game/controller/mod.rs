@@ -46,7 +46,7 @@ impl Controller {
         position: Vec2<f64>,
     ) -> Vec<PlayerAction> {
         let mouse_world_pos = render.screen_to_world(position);
-        for shape in &model.player_a.shape_buffer.0 {
+        for shape in model.player_a.shape_buffer.0.iter().chain(&model.player_a.active_shapes.0) {
             if let Some(&shape_pos) = render.positions.get(shape.id) {
                 if shape.shape.contains(mouse_world_pos - shape_pos) {
                     self.dragging = Some(Dragging::Shape(shape.id));

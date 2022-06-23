@@ -15,6 +15,10 @@ impl<T> Storage<T> {
         Self(HashMap::new())
     }
 
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut T> {
+        self.0.values_mut()
+    }
+
     pub fn get(&self, id: Id) -> Option<&T> {
         self.0.get(&id)
     }
@@ -44,7 +48,7 @@ pub struct Render {
 }
 
 impl Render {
-    pub fn screen_to_world(&self, screen_pos: Vec2<f64>) -> Vec2<R32> {
+    pub fn screen_to_world(&self, screen_pos: Vec2<f64>) -> Vec2<Coord> {
         self.camera
             .screen_to_world(self.framebuffer_size, screen_pos.map(|x| x as _))
             .map(r32)
@@ -69,6 +73,11 @@ impl Render {
 
     pub fn draw(&mut self, model: &Model, framebuffer: &mut ugli::Framebuffer) {
         let framebuffer_size = framebuffer.size().map(|x| x as f32);
+        if self.framebuffer_size != framebuffer_size {
+            self.positions
+                .iter_mut()
+                .for_each(|pos| *pos *= (framebuffer_size / self.framebuffer_size).map(r32));
+        }
         self.framebuffer_size = framebuffer_size;
 
         let bounds = AABB::point(self.camera.center).extend_symmetric(
@@ -112,10 +121,10 @@ impl Render {
                     .max(bounding_box.height())
                     .max(r32(1.0));
             self.scales.insert(plant.id, scale);
-            let draw_count = ((1.0
-                - (plant.time_left as f32 / plant.cooldown as f32) * plant.shape.0.len() as f32)
-                .floor() as usize)
-                .max(1);
+            let draw_count = ((1.0 - plant.time_left as f32 / plant.cooldown as f32)
+                * plant.shape.0.len() as f32)
+                .ceil() as usize
+                + 1;
             draw_shape(
                 position.map(|x| x.as_f32()),
                 plant.shape.0.iter().take(draw_count),
