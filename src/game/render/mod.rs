@@ -121,10 +121,10 @@ impl Render {
                     .max(bounding_box.height())
                     .max(r32(1.0));
             self.scales.insert(plant.id, scale);
-            let draw_count = ((1.0 - plant.time_left as f32 / plant.cooldown as f32)
+            let draw_count = (((1.0 - plant.time_left as f32 / plant.cooldown as f32)
                 * plant.shape.0.len() as f32)
-                .ceil() as usize
-                + 1;
+                .ceil() as usize)
+                .max(1);
             draw_shape(
                 position.map(|x| x.as_f32()),
                 plant.shape.0.iter().take(draw_count),
