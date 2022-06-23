@@ -3,16 +3,25 @@ use super::*;
 use model::*;
 
 pub struct Controller {
-    dragging: Option<Dragging>,
+    state: State,
 }
 
-pub enum Dragging {
-    Shape(Id),
+#[derive(Debug)]
+enum State {
+    Idle,
+    DraggingShape(Id),
+    // SelectingAttackTarget { weapon: Id },
+}
+
+struct Context<'a> {
+    model: &'a Model,
+    render: &'a mut Render,
+    event: geng::Event,
 }
 
 impl Controller {
     pub fn new() -> Self {
-        Self { dragging: None }
+        Self { state: State::Idle }
     }
 
     pub fn handle_event(
@@ -21,98 +30,92 @@ impl Controller {
         render: &mut Render,
         event: geng::Event,
     ) -> Vec<PlayerAction> {
-        match event {
-            geng::Event::KeyDown { key } => match key {
-                geng::Key::Enter => vec![PlayerAction::EndTurn],
-                _ => vec![],
-            },
-            geng::Event::MouseDown { position, button } => match button {
-                geng::MouseButton::Left => self.mouse_left_down(model, render, position),
-                _ => vec![],
-            },
-            geng::Event::MouseMove { position, .. } => self.mouse_move(model, render, position),
-            geng::Event::MouseUp { button, .. } => match button {
-                geng::MouseButton::Left => self.mouse_left_up(),
-                _ => vec![],
-            },
-            _ => vec![],
-        }
-    }
-
-    fn mouse_left_down(
-        &mut self,
-        model: &Model,
-        render: &mut Render,
-        position: Vec2<f64>,
-    ) -> Vec<PlayerAction> {
-        let mouse_world_pos = render.screen_to_world(position);
-        for shape in model
-            .player_a
-            .shape_buffer
-            .0
-            .iter()
-            .chain(&model.player_a.active_shapes.0)
-        {
-            if let Some(&shape_pos) = render.positions.get(shape.id) {
-                if shape.shape.contains(mouse_world_pos - shape_pos) {
-                    self.dragging = Some(Dragging::Shape(shape.id));
-                    return vec![];
-                }
-            }
-        }
-        vec![]
-    }
-
-    fn mouse_move(
-        &mut self,
-        model: &Model,
-        render: &mut Render,
-        position: Vec2<f64>,
-    ) -> Vec<PlayerAction> {
-        if let Some(dragging) = self.dragging.take() {
-            let (dragging, actions) = update_drag(dragging, model, render, position);
-            self.dragging = dragging;
-            return actions;
-        }
-        vec![]
-    }
-
-    fn mouse_left_up(&mut self) -> Vec<PlayerAction> {
-        self.dragging.take();
-        vec![]
+        let context = Context {
+            model,
+            render,
+            event,
+        };
+        let state = std::mem::replace(&mut self.state, State::Idle);
+        let (new_state, actions) = state.handle_event(context);
+        self.state = new_state;
+        actions
     }
 }
 
-fn update_drag(
-    dragging: Dragging,
-    model: &Model,
-    render: &mut Render,
-    position: Vec2<f64>,
-) -> (Option<Dragging>, Vec<PlayerAction>) {
-    let mouse_world_pos = render.screen_to_world(position);
-    match dragging {
-        Dragging::Shape(shape_id) => {
+impl State {
+    pub fn handle_event<'a>(self, context: Context<'a>) -> (Self, Vec<PlayerAction>) {
+        match self {
+            Self::Idle => handle_idle(context),
+            Self::DraggingShape(shape_id) => handle_drag_shape(shape_id, context),
+        }
+    }
+}
+
+fn handle_idle<'a>(ctx: Context<'a>) -> (State, Vec<PlayerAction>) {
+    match ctx.event {
+        geng::Event::KeyDown { key } => match key {
+            geng::Key::Enter => (State::Idle, vec![PlayerAction::EndTurn]),
+            _ => (State::Idle, vec![]),
+        },
+        geng::Event::MouseDown {
+            position,
+            button: geng::MouseButton::Left,
+        } => {
+            let mouse_world_pos = ctx.render.screen_to_world(position);
+            for shape in ctx
+                .model
+                .player_a
+                .shape_buffer
+                .0
+                .iter()
+                .chain(&ctx.model.player_a.active_shapes.0)
+            {
+                if let Some(&shape_pos) = ctx.render.positions.get(shape.id) {
+                    if shape.shape.contains(mouse_world_pos - shape_pos) {
+                        return (State::DraggingShape(shape.id), vec![]);
+                    }
+                }
+            }
+            (State::Idle, vec![])
+        }
+        _ => (State::Idle, vec![]),
+    }
+}
+
+fn handle_drag_shape<'a>(shape_id: Id, ctx: Context<'a>) -> (State, Vec<PlayerAction>) {
+    match ctx.event {
+        geng::Event::MouseUp {
+            button: geng::MouseButton::Left,
+            ..
+        } => (State::Idle, vec![]),
+        geng::Event::MouseMove { position, .. } => {
+            let mouse_world_pos = ctx.render.screen_to_world(position);
             // Move the shape
-            let bounds = render
+            let bounds = ctx
+                .render
                 .layout
                 .shape_buffer_a
-                .join(&render.layout.active_shapes_a)
-                .join(&render.layout.shape_farm_a);
+                .join(&ctx.render.layout.active_shapes_a)
+                .join(&ctx.render.layout.shape_farm_a);
             let pos = bounds.clamp_point(mouse_world_pos.map(|x| x.as_f32()));
             let actions = {
-                if render.layout.shape_buffer_a.contains(pos) {
+                if ctx.render.layout.shape_buffer_a.contains(pos) {
                     vec![PlayerAction::DeactivateShape(shape_id)]
-                } else if render.layout.active_shapes_a.contains(pos) {
+                } else if ctx.render.layout.active_shapes_a.contains(pos) {
                     vec![PlayerAction::ActivateShape(shape_id)]
-                } else if render.layout.shape_farm_a.contains(pos) {
-                    let mut upgradable_plants = model
+                } else if ctx.render.layout.shape_farm_a.contains(pos) {
+                    let mut upgradable_plants = ctx
+                        .model
                         .player_a
                         .shape_farm
                         .plants
                         .iter()
                         .filter_map(|plant| {
-                            render.positions.get(plant.id).and_then(|pos| {
-                                render.scales.get(plant.id).map(|scale| (pos, scale, plant))
+                            ctx.render.positions.get(plant.id).and_then(|pos| {
+                                ctx.render
+                                    .scales
+                                    .get(plant.id)
+                                    .map(|scale| (pos, scale, plant))
                             })
                         })
                         .filter(|(pos, scale, plant)| {
@@ -134,14 +137,15 @@ fn update_drag(
             };
             let pos = pos.map(r32);
 
-            let mut attachments = model
+            let mut attachments = ctx
+                .model
                 .player_a
                 .active_shapes
                 .0
                 .iter()
                 .filter(|shape| shape.id != shape_id)
                 .filter_map(|shape| {
-                    render
+                    ctx.render
                         .positions
                         .get(shape.id)
                         .and_then(|&shape_pos| try_attach(pos, &shape.shape, shape_pos))
@@ -149,7 +153,7 @@ fn update_drag(
                 });
             if let Some((target_id, attach_pos)) = attachments.next() {
                 return (
-                    Some(dragging),
+                    State::DraggingShape(shape_id),
                     vec![PlayerAction::AttachShape {
                         triangle: shape_id,
                         target: target_id,
@@ -158,15 +162,16 @@ fn update_drag(
                 );
             }
 
-            let current_pos = match render.positions.get_mut(shape_id) {
+            let current_pos = match ctx.render.positions.get_mut(shape_id) {
                 Some(pos) => pos,
                 None => {
-                    return (None, vec![]);
+                    return (State::Idle, vec![]);
                 }
             };
             *current_pos = pos;
-            (Some(dragging), actions)
+            (State::DraggingShape(shape_id), actions)
         }
+        _ => (State::DraggingShape(shape_id), vec![]),
     }
 }
 
