@@ -123,7 +123,8 @@ impl ShapeFarm {
         plants.insert(Plant::new(
             id_gen.next(),
             Shape(vec![TriPos { x: 0, y: 0 }]),
-            1,
+            2,
+            0,
         ));
         Self { plants }
     }
@@ -136,9 +137,9 @@ impl ActiveShapes {
 }
 
 impl Plant {
-    pub fn new(id: Id, shape: Shape, cooldown: Turns) -> Self {
+    pub fn new(id: Id, shape: Shape, cooldown: Turns, initial_cooldown: Turns) -> Self {
         Self {
-            time_left: cooldown,
+            time_left: initial_cooldown,
             id,
             shape,
             cooldown,
