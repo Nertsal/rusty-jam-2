@@ -50,69 +50,73 @@ impl Model {
     }
 
     fn attach_shape(&mut self, triangle: Id, target: Id, pos: TriPos) {
-        if self
-            .player_a
-            .active_shapes
-            .0
-            .get(&triangle)
-            .filter(|triangle| triangle.shape.0.len() == 1)
-            .is_none()
-        {
-            return;
-        }
-        let target = match self
-            .player_a
-            .active_shapes
-            .0
-            .get_mut(&target)
-            .filter(|target| target.shape.boundary().contains(&pos))
-        {
-            Some(target) => target,
-            None => return,
-        };
+        let mut attach_impl = || -> Option<()> {
+            let _triangle = self
+                .player_a
+                .active_shapes
+                .0
+                .get(&triangle)
+                .filter(|triangle| triangle.shape.0.len() == 1)?;
+            let target = self
+                .player_a
+                .active_shapes
+                .0
+                .get_mut(&target)
+                .filter(|target| target.shape.boundary().contains(&pos))?;
 
-        target.shape.0.push(pos);
-        self.player_a
-            .active_shapes
-            .0
-            .remove(&triangle)
-            .expect("Attached triangle disappeared");
+            target.shape.0.push(pos);
+            self.player_a
+                .active_shapes
+                .0
+                .remove(&triangle)
+                .expect("Attached triangle disappeared");
+            Some(())
+        };
+        attach_impl();
     }
 
     fn upgrade_plant(&mut self, source_shape: Id, target_plant: Id) {
-        let source = match self.player_a.shape_buffer.0.remove(&source_shape) {
-            Some(source) => source,
-            None => return,
-        };
-        let plant = match self.player_a.shape_farm.plants.get_mut(&target_plant) {
-            Some(farm) => farm,
-            None => return,
-        };
+        let mut upgrade_impl = || -> Option<()> {
+            let source = self.player_a.remove_shape(source_shape)?;
+            let plant = self.player_a.shape_farm.plants.get_mut(&target_plant)?;
 
-        match source.shape.0.len() {
-            0 => return,
-            1 => {
-                // Increase efficiency
-                todo!()
+            match source.0.len() {
+                0 => return None,
+                1 => {
+                    // Increase efficiency
+                    todo!()
+                }
+                _ => {
+                    // Change shape
+                    plant.shape = source;
+                    plant.time_left = plant.cooldown;
+                }
             }
-            _ => {
-                // Change shape
-                plant.shape = source.shape.clone();
-                plant.time_left = plant.cooldown;
-            }
-        }
+            Some(())
+        };
+        upgrade_impl();
     }
 
     fn attack(&mut self, weapon: Id, target: Id) {}
 }
 
-impl Plant {
-    pub fn tick(&mut self) -> bool {
-        if self.time_left <= 0 {
-            self.time_left = self.cooldown;
-            return true;
-        }
-        self.time_left -= 1;
-        false
+impl Player {
+    fn remove_shape(&mut self, id: Id) -> Option<Shape> {
+        self.shape_buffer
+            .0
+            .remove(&id)
+            .or_else(|| self.active_shapes.0.remove(&id))
+            .map(|shape| shape.shape)
     }
 }
+
+    impl Plant {
+        pub fn tick(&mut self) -> bool {
+            if self.time_left <= 0 {
+                self.time_left = self.cooldown;
+                return true;
+            }
+            self.time_left -= 1;
+            false
+        }
+    }
