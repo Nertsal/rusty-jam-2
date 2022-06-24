@@ -20,6 +20,7 @@ impl IdGenerator {
     }
 }
 
+#[derive(Debug)]
 pub enum PlayerAction {
     ActivateShape(Id),
     DeactivateShape(Id),
@@ -44,6 +45,7 @@ pub struct Model {
     id_gen: IdGenerator,
     pub player_a: Player,
     pub player_b: Player,
+    pub player_a_turn: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -100,6 +102,7 @@ impl Model {
         Self {
             player_a: Player::new(&mut id_gen),
             player_b: Player::new(&mut id_gen),
+            player_a_turn: true,
             id_gen,
         }
     }
