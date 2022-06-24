@@ -9,8 +9,8 @@ pub struct Controller {
 #[derive(Debug)]
 enum State {
     Idle,
-    DraggingShape(Id),
-    // SelectingAttackTarget { weapon: Id },
+    DraggingShape { shape_id: Id, start_pos: Vec2<f64> },
+    SelectingAttackTarget { weapon_id: Id },
 }
 
 struct Context<'a> {
@@ -46,7 +46,13 @@ impl State {
     pub fn handle_event<'a>(self, context: Context<'a>) -> (Self, Vec<PlayerAction>) {
         match self {
             Self::Idle => handle_idle(context),
-            Self::DraggingShape(shape_id) => handle_drag_shape(shape_id, context),
+            Self::DraggingShape {
+                shape_id,
+                start_pos,
+            } => handle_drag_shape(shape_id, start_pos, context),
+            Self::SelectingAttackTarget { weapon_id } => {
+                handle_select_attack_target(weapon_id, context)
+            }
         }
     }
 }
@@ -72,7 +78,13 @@ fn handle_idle<'a>(ctx: Context<'a>) -> (State, Vec<PlayerAction>) {
             {
                 if let Some(&shape_pos) = ctx.render.positions.get(shape.id) {
                     if shape.shape.contains(mouse_world_pos - shape_pos) {
-                        return (State::DraggingShape(shape.id), vec![]);
+                        return (
+                            State::DraggingShape {
+                                shape_id: shape.id,
+                                start_pos: position,
+                            },
+                            vec![],
+                        );
                     }
                 }
             }
@@ -82,12 +94,27 @@ fn handle_idle<'a>(ctx: Context<'a>) -> (State, Vec<PlayerAction>) {
     }
 }
 
-fn handle_drag_shape<'a>(shape_id: Id, ctx: Context<'a>) -> (State, Vec<PlayerAction>) {
+fn handle_drag_shape<'a>(
+    shape_id: Id,
+    start_pos: Vec2<f64>,
+    ctx: Context<'a>,
+) -> (State, Vec<PlayerAction>) {
     match ctx.event {
         geng::Event::MouseUp {
             button: geng::MouseButton::Left,
-            ..
-        } => (State::Idle, vec![]),
+            position,
+        } => {
+            if start_pos == position {
+                (
+                    State::SelectingAttackTarget {
+                        weapon_id: shape_id,
+                    },
+                    vec![],
+                )
+            } else {
+                (State::Idle, vec![])
+            }
+        }
         geng::Event::MouseMove { position, .. } => {
             let mouse_world_pos = ctx.render.screen_to_world(position);
             // Move the shape
@@ -153,7 +180,10 @@ fn handle_drag_shape<'a>(shape_id: Id, ctx: Context<'a>) -> (State, Vec<PlayerAc
                 });
             if let Some((target_id, attach_pos)) = attachments.next() {
                 return (
-                    State::DraggingShape(shape_id),
+                    State::DraggingShape {
+                        shape_id,
+                        start_pos,
+                    },
                     vec![PlayerAction::AttachShape {
                         triangle: shape_id,
                         target: target_id,
@@ -169,9 +199,72 @@ fn handle_drag_shape<'a>(shape_id: Id, ctx: Context<'a>) -> (State, Vec<PlayerAc
                 }
             };
             *current_pos = pos;
-            (State::DraggingShape(shape_id), actions)
+            (
+                State::DraggingShape {
+                    shape_id,
+                    start_pos,
+                },
+                actions,
+            )
         }
-        _ => (State::DraggingShape(shape_id), vec![]),
+        _ => (
+            State::DraggingShape {
+                shape_id,
+                start_pos,
+            },
+            vec![],
+        ),
+    }
+}
+
+fn handle_select_attack_target<'a>(weapon_id: Id, ctx: Context<'a>) -> (State, Vec<PlayerAction>) {
+    match ctx.event {
+        geng::Event::MouseDown {
+            position,
+            button: geng::MouseButton::Left,
+        } => {
+            let mouse_world_pos = ctx.render.screen_to_world(position);
+            for (id, scale, pos, shape) in ctx
+                .model
+                .player_b
+                .active_shapes
+                .0
+                .iter()
+                .filter_map(|shape| {
+                    ctx.render
+                        .positions
+                        .get(shape.id)
+                        .map(|pos| (shape.id, r32(1.0), *pos, &shape.shape))
+                })
+                .chain(
+                    ctx.model
+                        .player_b
+                        .shape_farm
+                        .plants
+                        .iter()
+                        .filter_map(|plant| {
+                            ctx.render.positions.get(plant.id).and_then(|pos| {
+                                ctx.render
+                                    .scales
+                                    .get(plant.id)
+                                    .map(|scale| (plant.id, *scale, *pos, &plant.shape))
+                            })
+                        }),
+                )
+            {
+                if shape.contains((mouse_world_pos - pos) / scale) {
+                    return (
+                        State::Idle,
+                        vec![PlayerAction::Attack {
+                            weapon: weapon_id,
+                            target: id,
+                        }],
+                    );
+                }
+            }
+            (State::Idle, vec![])
+        }
+        _ => (State::SelectingAttackTarget { weapon_id }, vec![]),
     }
 }
 
