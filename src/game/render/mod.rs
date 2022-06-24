@@ -110,8 +110,20 @@ impl Render {
         )
         .draw_2d(&self.geng, framebuffer, &self.camera);
 
-        for plant in &model.player_a.shape_farm.plants {
-            let random_pos = random_point_in(layout.shape_farm_a.0).map(r32);
+        let plants_a = model
+            .player_a
+            .shape_farm
+            .plants
+            .iter()
+            .map(|plant| (plant, Color::BLUE, layout.shape_farm_a.0));
+        let plants_b = model
+            .player_b
+            .shape_farm
+            .plants
+            .iter()
+            .map(|plant| (plant, Color::RED, layout.shape_farm_b.0));
+        let plants = plants_a.chain(plants_b).map(|(plant, color, layout)| {
+            let random_pos = random_point_in(layout).map(r32);
             let position = *self.positions.get_or_default(plant.id, random_pos);
             let bounding_box =
                 AABB::points_bounding_box(plant.shape.0.iter().map(|pos| pos.to_cartesian())); // TODO: avoid panic when shape has no points
@@ -125,44 +137,69 @@ impl Render {
                 * plant.shape.0.len() as f32)
                 .ceil() as usize)
                 .max(1);
-            draw_shape(
+            (
                 position.map(|x| x.as_f32()),
                 plant.shape.0.iter().take(draw_count),
                 scale.as_f32(),
-                Color::GREEN,
-                &self.camera,
-                &self.geng,
-                framebuffer,
-            );
-        }
+                color,
+            )
+        });
 
-        for shape in &model.player_a.shape_buffer.0 {
-            let random_pos = random_point_in(layout.shape_buffer_a.0).map(r32);
-            let position = *self.positions.get_or_default(shape.id, random_pos);
-            draw_shape(
-                position.map(|x| x.as_f32()),
-                &shape.shape.0,
-                1.0,
-                Color::GRAY,
-                &self.camera,
-                &self.geng,
-                framebuffer,
-            );
-        }
+        draw_shapes(plants, &self.camera, &self.geng, framebuffer);
 
-        for shape in &model.player_a.active_shapes.0 {
-            let random_pos = random_point_in(layout.active_shapes_a.0).map(r32);
-            let position = *self.positions.get_or_default(shape.id, random_pos);
-            draw_shape(
-                position.map(|x| x.as_f32()),
-                &shape.shape.0,
-                1.0,
-                Color::BLUE,
-                &self.camera,
-                &self.geng,
-                framebuffer,
-            );
-        }
+        let buffer_a = model
+            .player_a
+            .shape_buffer
+            .0
+            .iter()
+            .map(|shape| (shape, Color::GRAY, layout.shape_buffer_a.0));
+        let buffer_b = model
+            .player_b
+            .shape_buffer
+            .0
+            .iter()
+            .map(|shape| (shape, Color::GRAY, layout.shape_buffer_b.0));
+        let active_a = model
+            .player_a
+            .active_shapes
+            .0
+            .iter()
+            .map(|shape| (shape, Color::BLUE, layout.active_shapes_a.0));
+        let active_b = model
+            .player_b
+            .active_shapes
+            .0
+            .iter()
+            .map(|shape| (shape, Color::RED, layout.active_shapes_b.0));
+        let shapes = buffer_a
+            .chain(buffer_b)
+            .chain(active_a)
+            .chain(active_b)
+            .map(|(shape, color, layout)| {
+                let random_pos = random_point_in(layout).map(r32);
+                let position = *self.positions.get_or_default(shape.id, random_pos);
+                (position.map(|x| x.as_f32()), &shape.shape.0, 1.0, color)
+            });
+
+        draw_shapes(shapes, &self.camera, &self.geng, framebuffer);
+    }
+}
+
+pub fn draw_shapes<'a>(
+    shapes: impl IntoIterator<
+        Item = (
+            Vec2<f32>,
+            impl IntoIterator<Item = &'a TriPos>,
+            f32,
+            Color<f32>,
+        ),
+    >,
+    camera: &'a Camera2d,
+    geng: &'a Geng,
+    framebuffer: &'a mut ugli::Framebuffer,
+) {
+    for (pos, shape, scale, color) in shapes {
+        draw_shape(pos, shape, scale, color, camera, geng, framebuffer);
     }
 }
 
